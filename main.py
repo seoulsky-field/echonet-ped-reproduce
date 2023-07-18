@@ -1,7 +1,7 @@
 """Entry point for command line."""
 
-import echonet
+import initialize
 
 
 if __name__ == '__main__':
-    echonet.main()
+    initialize.main()

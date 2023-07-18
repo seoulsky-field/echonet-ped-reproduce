@@ -8,7 +8,9 @@ import pandas
 import numpy as np
 import skimage.draw
 import torchvision
-import echonet
+
+from . import config
+from . import tools
 
 
 class Echo(torchvision.datasets.VisionDataset):
@@ -16,7 +18,7 @@ class Echo(torchvision.datasets.VisionDataset):
 
     Args:
         root (string): Root directory of dataset (defaults to `echonet.config.DATA_DIR`)
-        split (string): One of {``train'', ``val'', ``test'', ``all'', or ``external_test''}
+        split (string): One of {``train'', ``val'', ``test'', ``all'', ``fold/train'', or ``external_test''}
         target_type (string or list, optional): Type of target to use,
             ``Filename'', ``EF'', ``EDV'', ``ESV'', ``LargeIndex'',
             ``SmallIndex'', ``LargeFrame'', ``SmallFrame'', ``LargeTrace'',
@@ -70,9 +72,10 @@ class Echo(torchvision.datasets.VisionDataset):
                  pad=None,
                  noise=None,
                  target_transform=None,
-                 external_test_location=None):
+                 external_test_location=None,
+                 test_fold=None):
         if root is None:
-            root = echonet.config.DATA_DIR
+            root = config.DATA_DIR
 
         super().__init__(root, target_transform=target_transform)
 
@@ -91,6 +94,7 @@ class Echo(torchvision.datasets.VisionDataset):
         self.noise = noise
         self.target_transform = target_transform
         self.external_test_location = external_test_location
+        self.test_fold = test_fold
 
         self.fnames, self.outcome = [], []
 
@@ -100,10 +104,30 @@ class Echo(torchvision.datasets.VisionDataset):
             # Load video-level labels
             with open(os.path.join(self.root, "FileList.csv")) as f:
                 data = pandas.read_csv(f)
-            data["Split"].map(lambda x: x.upper())
 
-            if self.split != "ALL":
-                data = data[data["Split"] == self.split]
+            # EchoNet-Ped split column is consisted of integer values.
+            if "FOLD" in self.split:
+                if "TRAIN" in self.split:
+                    if type(self.test_fold) is int:
+                        data = data[data["Split"] != self.test_fold]
+                    elif type(self.test_fold) is list:
+                        data = data[~data["Split"].isin(self.test_fold)]
+                    else:
+                        raise NotImplementedError
+                elif "VALID" in self.split:
+                    if type(self.test_fold) is int:
+                        data = data[data["Split"] == self.test_fold]
+                    elif type(self.test_fold) is list:
+                        data = data[data["Split"].isin(self.test_fold)]
+                    else:
+                        raise NotImplementedError
+                else:
+                    raise NotImplementedError
+            else:
+                data["Split"].map(lambda x: x.upper())
+
+                if self.split != "ALL":
+                    data = data[data["Split"] == self.split]
 
             self.header = data.columns.tolist()
             self.fnames = data["FileName"].tolist()
@@ -169,7 +193,7 @@ class Echo(torchvision.datasets.VisionDataset):
             video = os.path.join(self.root, "Videos", self.fnames[index])
 
         # Load video into np.array
-        video = echonet.utils.loadvideo(video).astype(np.float32)
+        video = tools.loadvideo(video).astype(np.float32)
 
         # Add simulated noise (black out random pixels)
         # 0 represents black at this point (video has not been normalized yet)

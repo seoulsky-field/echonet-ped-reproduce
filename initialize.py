@@ -6,10 +6,9 @@ prediction models.
 
 import click
 
-from echonet.__version__ import __version__
-from echonet.config import CONFIG as config
-import echonet.datasets as datasets
-import echonet.utils as utils
+from version import __version__
+from utils.config import CONFIG as config
+import utils
 
 
 @click.group()
@@ -24,4 +23,4 @@ main.add_command(utils.segmentation.run)
 main.add_command(utils.video.run)
 main.add_command(utils.joint.run)
 
-__all__ = ["__version__", "config", "datasets", "main", "utils"]
+__all__ = ["__version__", "main", "utils"]
