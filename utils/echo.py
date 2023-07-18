@@ -73,6 +73,7 @@ class Echo(torchvision.datasets.VisionDataset):
                  noise=None,
                  target_transform=None,
                  external_test_location=None,
+                 valid_fold=None,
                  test_fold=None):
         if root is None:
             root = config.DATA_DIR
@@ -94,7 +95,9 @@ class Echo(torchvision.datasets.VisionDataset):
         self.noise = noise
         self.target_transform = target_transform
         self.external_test_location = external_test_location
+        self.valid_fold = valid_fold
         self.test_fold = test_fold
+        self.non_train_fold = [valid_fold, test_fold]
 
         self.fnames, self.outcome = [], []
 
@@ -108,19 +111,11 @@ class Echo(torchvision.datasets.VisionDataset):
             # EchoNet-Ped split column is consisted of integer values.
             if "FOLD" in self.split:
                 if "TRAIN" in self.split:
-                    if type(self.test_fold) is int:
-                        data = data[data["Split"] != self.test_fold]
-                    elif type(self.test_fold) is list:
-                        data = data[~data["Split"].isin(self.test_fold)]
-                    else:
-                        raise NotImplementedError
+                    data = data[~data["Split"].isin(self.non_train_fold)]
                 elif "VALID" in self.split:
-                    if type(self.test_fold) is int:
-                        data = data[data["Split"] == self.test_fold]
-                    elif type(self.test_fold) is list:
-                        data = data[data["Split"].isin(self.test_fold)]
-                    else:
-                        raise NotImplementedError
+                    data = data[data["Split"] == self.valid_fold]
+                elif "TEST" in self.split:
+                    data = data[data["Split"] == self.test_fold]
                 else:
                     raise NotImplementedError
             else:
